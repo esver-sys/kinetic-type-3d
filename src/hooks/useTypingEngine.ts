@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { soundEngine } from '../audio/soundEngine'
-import { KEY_BY_CODE, normalizeKeyCode } from '../constants/keyboardLayout'
+import { getTargetKeyCodes } from '../constants/holoMatrixLayout'
 import {
   generateChinesePhraseText,
   generatePinyinPrompt,
@@ -16,7 +16,6 @@ import {
   PinyinEntry,
   PracticeMode,
   PromptChar,
-  SoundProfile,
   TestSummary,
   TimeOption,
   WordsOption,
@@ -26,10 +25,10 @@ import {
 export type TestStatus = 'idle' | 'running' | 'finished'
 
 interface UseTypingEngineOptions {
-  soundProfile: SoundProfile
-  pressKey: (rawCode: string, isError?: boolean) => void
-  releaseKey: (rawCode: string) => void
-  releaseAll: () => void
+  triggerPulse: (rawCode: string, isError?: boolean, strength?: number) => void
+  setKeyDown?: (rawCode: string, isDown: boolean) => void
+  releaseAllKeys?: () => void
+  setExpectedCodes?: (codes: string[]) => void
   streakIntensityRef: React.MutableRefObject<number>
 }
 
@@ -62,10 +61,10 @@ function isExpectedCharMatch(
 }
 
 export function useTypingEngine({
-  soundProfile,
-  pressKey,
-  releaseKey,
-  releaseAll,
+  triggerPulse,
+  setKeyDown,
+  releaseAllKeys,
+  setExpectedCodes,
   streakIntensityRef,
 }: UseTypingEngineOptions) {
   const [mode, setMode] = useState<PracticeMode>('time')
@@ -113,7 +112,6 @@ export function useTypingEngine({
   const chineseSubModeRef = useRef<ChineseSubMode>(chineseSubMode)
   const activeSnippetRef = useRef<CodeSnippet>(activeSnippet)
   const activeProseRef = useRef<ChineseProsePassage>(activeProse)
-  const soundProfileRef = useRef<SoundProfile>(soundProfile)
 
   const startTimeRef = useRef<number>(0)
   const wpmRef = useRef(0)
@@ -130,10 +128,6 @@ export function useTypingEngine({
   const lastSampleSecondRef = useRef(0)
   const prevSampleCorrectRef = useRef(0)
   const prevSampleTotalRef = useRef(0)
-
-  useEffect(() => {
-    soundProfileRef.current = soundProfile
-  }, [soundProfile])
 
   const isHanziImeMode = useCallback(() => {
     return modeRef.current === 'chinese' && chineseSubModeRef.current !== 'pinyin'
@@ -460,13 +454,15 @@ export function useTypingEngine({
       }
 
       if (hadError) {
-        pressKey(keyCode, true)
-        soundEngine.playErrorThud(soundProfileRef.current)
+        triggerPulse(keyCode, true, 1.35)
+        soundEngine.playErrorPulse()
       } else if (hadCorrect && isDirectKeypress) {
-        const normalized = normalizeKeyCode(keyCode)
-        const soundSize = KEY_BY_CODE[normalized]?.soundSize ?? 'standard'
-        pressKey(keyCode, false)
-        soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+        const boost = keyCode === 'Space' || keyCode === 'Enter' ? 1.25 : 1.0
+        triggerPulse(keyCode, false, boost)
+        soundEngine.playTypingChime(keyCode, comboRef.current)
+      } else if (hadCorrect) {
+        triggerPulse(keyCode, false, 1.3)
+        soundEngine.playTypingChime(keyCode, comboRef.current)
       }
 
       charsRef.current = list
@@ -500,7 +496,7 @@ export function useTypingEngine({
       countCorrectTypedChars,
       finishTest,
       isHanziImeMode,
-      pressKey,
+      triggerPulse,
       updateStreakRef,
     ],
   )
@@ -582,25 +578,33 @@ export function useTypingEngine({
     return () => window.clearInterval(id)
   }, [computeSpeed, countCorrectTypedChars, finishTest, status, updateStreakRef])
 
-  // Global low-latency keyboard capture
+  // Sync next expected crystal key indicator on the 3D Holo Input Matrix
   useEffect(() => {
-    const getSoundSize = (code: string) => {
-      const normalized = normalizeKeyCode(code)
-      return KEY_BY_CODE[normalized]?.soundSize ?? 'standard'
+    if (!setExpectedCodes) return
+    if (status === 'finished' || isHanziImeMode()) {
+      setExpectedCodes([])
+      return
     }
+    setExpectedCodes(getTargetKeyCodes(chars[cursor]?.char))
+  }, [chars, cursor, isHanziImeMode, setExpectedCodes, status])
 
+  // Global low-latency telemetry capture & harmonic feedback
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      soundEngine.unlock()
+      soundEngine.unlockFromGesture()
+
+      if (!e.repeat) {
+        setKeyDown?.(e.code, true)
+      }
 
       if (e.ctrlKey || e.metaKey || e.altKey) {
         if (!e.repeat) {
-          pressKey(e.code, false)
+          triggerPulse(e.code, false, 0.55)
         }
         return
       }
 
       lastPressedCodeRef.current = e.code
-      const soundSize = getSoundSize(e.code)
 
       // Handle Tab for Tab+Enter quick restart
       if (e.code === 'Tab') {
@@ -608,8 +612,7 @@ export function useTypingEngine({
         if (!e.repeat) {
           tabHeldRef.current = true
           armTab()
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.7)
         }
         return
       }
@@ -617,8 +620,8 @@ export function useTypingEngine({
       // Handle Enter when Tab+Enter quick restart is armed or held
       if (e.code === 'Enter' && (tabArmedRef.current || tabHeldRef.current)) {
         e.preventDefault()
-        pressKey(e.code, false)
-        soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+        triggerPulse(e.code, false, 1.35)
+        soundEngine.playHoloBurst()
         resetTest()
         return
       }
@@ -626,22 +629,20 @@ export function useTypingEngine({
       if (statusRef.current === 'finished') {
         if (e.code === 'Escape') {
           e.preventDefault()
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.9)
           resetTest()
         }
         return
       }
 
-      // Modifier-only keys animate physically & sound
+      // Modifier-only keys emit soft subtle spatial ripple
       if (
         e.code === 'ShiftLeft' ||
         e.code === 'ShiftRight' ||
         e.code === 'CapsLock'
       ) {
         if (!e.repeat) {
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.5)
         }
         return
       }
@@ -649,14 +650,12 @@ export function useTypingEngine({
       if (e.code === 'Escape') {
         if (!isComposingRef.current && !e.isComposing) {
           e.preventDefault()
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.9)
           if (statusRef.current === 'running') {
             resetTest()
           }
         } else {
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.65)
         }
         return
       }
@@ -666,7 +665,7 @@ export function useTypingEngine({
         totalKeystrokesRef.current += 1
       }
 
-      // Chinese IME mode: depress 3D key & play sound immediately, let IME input handle text composition/commit
+      // Chinese IME mode: trigger gentle harmonic chime & pulse immediately, let IME input handle composition/commit
       if (isHanziImeMode()) {
         if (document.activeElement !== imeInputRef.current) {
           imeInputRef.current?.focus({ preventScroll: true })
@@ -675,8 +674,8 @@ export function useTypingEngine({
         if (e.isComposing || isComposingRef.current || e.key === 'Process' || e.keyCode === 229) {
           if (tabArmedRef.current) disarmTab()
           if (!e.repeat) {
-            pressKey(e.code, false)
-            soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+            triggerPulse(e.code, false, 0.78)
+            soundEngine.playTypingChime(e.code, comboRef.current)
           }
           return
         }
@@ -685,16 +684,14 @@ export function useTypingEngine({
 
         if (e.code === 'Backspace') {
           e.preventDefault()
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.7)
           handleBackspaceAction()
           return
         }
 
-        // Physical key press sound & travel; non-IME character input will commit via onImeInput
         if (!e.repeat) {
-          pressKey(e.code, false)
-          soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+          triggerPulse(e.code, false, 0.78)
+          soundEngine.playTypingChime(e.code, comboRef.current)
         }
         return
       }
@@ -708,8 +705,7 @@ export function useTypingEngine({
 
       if (e.code === 'Backspace') {
         e.preventDefault()
-        pressKey(e.code, false)
-        soundEngine.playKeyDown(soundProfileRef.current, soundSize)
+        triggerPulse(e.code, false, 0.7)
         handleBackspaceAction()
         return
       }
@@ -734,18 +730,15 @@ export function useTypingEngine({
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      setKeyDown?.(e.code, false)
       if (e.code === 'Tab') {
         tabHeldRef.current = false
-      }
-      releaseKey(e.code)
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        soundEngine.playKeyUp(soundProfileRef.current, getSoundSize(e.code))
       }
     }
 
     const handleBlur = () => {
       tabHeldRef.current = false
-      releaseAll()
+      releaseAllKeys?.()
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -763,10 +756,10 @@ export function useTypingEngine({
     disarmTab,
     handleBackspaceAction,
     isHanziImeMode,
-    pressKey,
-    releaseAll,
-    releaseKey,
+    releaseAllKeys,
     resetTest,
+    setKeyDown,
+    triggerPulse,
   ])
 
   const onImeCompositionStart = useCallback(() => {

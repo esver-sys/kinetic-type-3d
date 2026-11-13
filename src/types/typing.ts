@@ -8,7 +8,15 @@ export type ChineseSubMode = 'phrases' | 'prose' | 'pinyin'
 
 export type CodeLanguage = 'typescript' | 'rust' | 'python' | 'css'
 
-export type SoundProfile = 'tactile-brown' | 'clicky-blue' | 'thocky-linear' | 'mute'
+export type MusicTrackId =
+  | 'stellar-drift'
+  | 'orbital-nocturne'
+  | 'quantum-pulse'
+  | 'nebula-elegy'
+
+export type SynthStemId = 'drums' | 'bass' | 'pad' | 'lead'
+
+export type StemEnableMap = Record<SynthStemId, boolean>
 
 export type AccentId = 'cyan' | 'amber' | 'violet' | 'emerald' | 'coral'
 
@@ -66,45 +74,39 @@ export interface ChineseProsePassage {
   text: string
 }
 
-export interface KeyDefinition {
-  /** Standard KeyboardEvent.code (e.g. 'KeyA', 'Space', 'ShiftLeft') */
-  code: string
-  /** Primary legend displayed on keycap */
-  label: string
-  /** Secondary shifted legend displayed above/beside primary legend */
-  shiftLabel?: string
-  /** Tiny front/corner sub-legend (e.g. 'ESC' on Backquote) */
-  subLabel?: string
-  /** Row index from top (0 = number row, 4 = bottom modifier row) */
-  row: 0 | 1 | 2 | 3 | 4
-  /** Width in standard 1u key units */
-  width: number
-  /** Visual classification for subtle two-tone PBT styling */
-  category: 'alpha' | 'modifier' | 'accent'
-  /** X center coordinate in key units (centered around 0) */
-  x: number
-  /** Z center coordinate in key units (centered around 0) */
-  z: number
-  /** Relative sound pitch/depth size factor */
-  soundSize: 'standard' | 'medium' | 'space'
+export interface ShockwavePulse {
+  /** Monotonically incrementing pulse id */
+  id: number
+  /** Timestamp (performance.now()) when triggered */
+  at: number
+  /** Polar azimuth [0..2PI] derived from pressed key code */
+  angle: number
+  /** Origin X coordinate on the 3D holographic matrix */
+  originX: number
+  /** Origin Z coordinate on the 3D holographic matrix */
+  originZ: number
+  /** True when triggered by typing error */
+  isError: boolean
+  /** Intensity scalar (1.0 normal, >1 for Enter/Space/high-combo) */
+  strength: number
 }
 
-export interface KeyPhysicsState {
-  pressed: boolean
-  /** Timestamp (performance.now()) until which a fast tap keeps minimum visual travel impulse */
-  pressPulseUntil: number
-  /** Timestamp (performance.now()) of most recent press */
-  lastPressedAt: number
-  /** Timestamp (performance.now()) of most recent error flash on this key */
-  errorFlashAt: number
-  /** Current vertical depression offset in Three.js world units */
-  currentY: number
-  /** Vertical velocity for spring-damper integration */
-  velocityY: number
-  /** Current localized glow intensity [0..1+] */
-  glowIntensity: number
-  /** Current red error flash intensity [0..1] */
-  errorIntensity: number
+export interface KeyPressState {
+  down: boolean
+  pressedAt: number
+  releasedAt: number
+  errorAt: number
+}
+
+export interface TelemetryPulseState {
+  lastPulseAt: number
+  lastPulseId: number
+  lastAngle: number
+  lastIsError: boolean
+  pulseStrength: number
+  shockwaves: ShockwavePulse[]
+  keyStates: Record<string, KeyPressState>
+  expectedCodes: string[]
 }
 
 export interface CodeSnippet {

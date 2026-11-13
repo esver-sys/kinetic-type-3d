@@ -21,6 +21,7 @@ interface TypingPromptProps {
   cursor: number
   combo: number
   tabArmed: boolean
+  audioReady: boolean
   sessionId: number
   pinyinHanziMap: Record<number, PinyinEntry>
   composingText: string
@@ -47,6 +48,7 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
   cursor,
   combo,
   tabArmed,
+  audioReady,
   sessionId,
   pinyinHanziMap,
   composingText,
@@ -177,7 +179,7 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
     const isNewline = item.char === '\n'
     const isSpace = item.char === ' '
 
-    let colorClass = 'text-slate-400/50'
+    let colorClass = 'text-slate-300/60'
     let bgClass = ''
 
     if (item.status === 'correct') {
@@ -267,14 +269,36 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
         {/* Subtle glass top specular edge */}
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
+        {/* Subtle Sci-Fi Holographic HUD Corner Brackets */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-3 h-3 w-3 rounded-tl-md border-l border-t opacity-55"
+          style={{ borderColor: accent.hex }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-3 h-3 w-3 rounded-tr-md border-r border-t opacity-55"
+          style={{ borderColor: accent.hex }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 rounded-bl-md border-b border-l opacity-45"
+          style={{ borderColor: accent.hex }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 rounded-br-md border-b border-r opacity-45"
+          style={{ borderColor: accent.hex }}
+        />
+
         {/* Masked Smooth Viewport */}
         <div
           className={`relative overflow-hidden ${
             mode === 'code'
-              ? 'h-[154px] sm:h-[168px]'
+              ? 'h-[164px] sm:h-[176px]'
               : isHanziMode
-                ? 'h-[130px] sm:h-[136px]'
-                : 'h-[124px] sm:h-[132px]'
+                ? 'h-[136px] sm:h-[144px]'
+                : 'h-[132px] sm:h-[140px]'
           }`}
           style={{
             maskImage:
@@ -372,7 +396,11 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                   >
-                    {isHanziMode ? t.prompt.imeHint : t.prompt.startTyping}
+                    {isHanziMode
+                      ? t.prompt.imeHint
+                      : !audioReady
+                        ? t.prompt.startWithAudio
+                        : t.prompt.startTyping}
                   </motion.span>
                 ) : (
                   <motion.span

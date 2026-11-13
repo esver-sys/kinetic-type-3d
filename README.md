@@ -1,6 +1,6 @@
-# KINETIC — 3D Tactile Typing Studio
+# KINETIC — Sci-Fi Holographic 3D Typing Studio
 
-An interactive 3D mechanical typing practice web app focused on tactile physics, spatial lighting, procedural Web Audio synthesis, and bilingual (English & 中文) typing experiences.
+An interactive sci-fi 3D typing practice studio built around tactile keystroke physics and spatial feedback — featuring 61 suspended translucent crystal sensor wafers, damped spring travel, next-key holographic targeting, concentric keystroke shockwaves, bilingual (`EN` / `中文`) practice modes, and a pure-code Web Audio polyphonic synth companion.
 
 **Live Demo:** [https://esver-sys.github.io/kinetic-type-3d/](https://esver-sys.github.io/kinetic-type-3d/)
 
@@ -8,24 +8,17 @@ An interactive 3D mechanical typing practice web app focused on tactile physics,
 
 ## Features / 核心特性
 
-- **3D Mechanical Keyboard (`React Three Fiber`)**
-  - Perspective 60% mechanical keyboard rendered in the lower viewport with sculpted keycaps, shadows, subtle RGB underglow, and gentle mouse-move parallax tilt.
-  - Real-time keypress synchronization: every physical keystroke depresses and springs back the matching 3D keycap while triggering localized backlight illumination.
-  - High-speed combo streaks dynamically intensify the keyboard's ambient glow; typing errors trigger a red keycap flash and character shake.
-- **Zero-Latency Procedural Sound Engine (`Web Audio API`)**
-  - Purely synthesized mechanical switch acoustics with zero external audio files:
-    - **Tactile Brown (茶轴)**
-    - **Clicky Blue (青轴)**
-    - **Thocky Linear (线性轴)**
-    - **Mute (静音)**
-  - Distinct muted error thud on mistyped characters.
-- **Typing Modes & Bilingual Support (EN / 中文)**
-  - **Time** (`15s` / `30s` / `60s`), **Words** (`10` / `25` / `50`), **Code Snippets**, and **Chinese (中文)** practice modes.
-  - Bilingual interface switcher (`EN` / `中文`) and non-blocking Chinese IME composition positioning so candidate windows stay clear of the active prompt text.
-  - Accent color customization (including Neon Cyan, Warm Amber, and additional presets) with frosted glass HUD panels.
-- **Live HUD & 3D Tilt Summary Card**
-  - Real-time speed (WPM / CPM), Accuracy %, and Combo counter.
-  - Post-test 3D tilt summary modal displaying final speed, accuracy, consistency, and instant restart via `Tab + Enter`.
+- **Sci-Fi Holographic Crystal Input Matrix (`React Three Fiber` + `Three.js`)**
+  - **61 Floating Optical Crystal Wafers:** Translucent sapphire-glass input plates hovering over laser-etched optical emitter sockets on an open carbon-titanium deck — zero traditional plastic keycaps or mechanical switches.
+  - **Zero-Latency Tactile Spring Physics:** Every physical `keydown` / `keyup` compresses and rebounds the matching 3D crystal wafer via real damped spring physics, radiating concentric plasma waves outward across neighboring wafers from the exact struck coordinate.
+  - **Next-Key Holographic Guidance:** Gently highlights the upcoming expected character crystal (including `Shift` when required) in ASCII / Pinyin / Code modes.
+  - **Error & Combo Telemetry:** Mistyped keys flash sharp crimson (`#ff2446`) with subtle glitch shake and reset combo; higher WPM & combo streaks ignite twin stabilizer wing bars and accelerate background star-warp speed.
+- **Typing-First Minimalist UI & Bilingual Modes (`EN` / `中文`)**
+  - **Modes:** `Time` (`15s` / `30s` / `60s`), `Words` (`10` / `25` / `50`), `Code` (`TypeScript` / `Rust` / `Python` / `CSS`), and `中文` (`词组` / `诗文` / `拼音`).
+  - **Chinese IME Support:** Clean bottom-anchored hidden composition input keeps OS candidate bars cleanly below the prompt box without obscuring target text.
+  - **Live HUD & 3D Summary Card:** Real-time WPM/CPM, accuracy %, combo streak, 5 customizable accent themes, and post-test 3D tilt summary card (`Tab + Enter` quick restart).
+- **Pure-Code Web Audio Synth Companion (`Web Audio API`)**
+  - **Unobtrusive Bottom-Right Synth Pill:** Lightweight corner control pill keeps the typing arena and 3D matrix unobstructed, with click-to-expand drawer for 4 procedural tracks (`星际漫游 Starlight Horizon`, `轨道夜曲 Orbital Nocturne`, `量子脉冲 Quantum Drive`, `星云诗篇 Nebula Elegy`), volume control, 4-stem mixer toggles (`鼓组` / `低音` / `和弦` / `旋律`), harmonic keystroke chimes toggle, and mute.
 
 ---
 
@@ -35,7 +28,7 @@ An interactive 3D mechanical typing practice web app focused on tactile physics,
 - **3D Rendering:** Three.js, `@react-three/fiber`, `@react-three/drei`
 - **Styling & Motion:** Tailwind CSS v4, Framer Motion, Lucide React
 - **Typography:** JetBrains Mono Variable & Inter Variable (`@fontsource-variable`)
-- **Audio:** Procedural Web Audio API synthesizer (`src/audio/soundEngine.ts`)
+- **Audio Synthesis:** Pure Web Audio API polyphonic sequencer, stereo Convolver reverb, ping-pong delay, stem buses & FFT `AnalyserNode`
 
 ---
 
@@ -47,27 +40,28 @@ kinetic-type-3d/
 │   └── deploy.yml                # Automated GitHub Pages build & deploy workflow
 ├── src/
 │   ├── audio/
-│   │   └── soundEngine.ts        # Procedural Web Audio API switch & error sound synthesizer
+│   │   ├── musicTracks.ts        # 4 multi-bar open-voicing procedural songs & harmonic scales
+│   │   └── soundEngine.ts        # Web Audio synthesizer, per-session FX buses, stems & analyser
 │   ├── components/
+│   │   ├── AudioConsoleDock.tsx  # Compact bottom-right synth pill & expandable track/stem drawer
 │   │   ├── ErrorBoundary.tsx     # Graceful WebGL / runtime fallback boundary
-│   │   ├── Keyboard3DScene.tsx   # 3D keyboard rig, lighting, underglow & parallax scene
-│   │   ├── KeycapGeometry.ts     # Procedural 3D keycap geometry builder
 │   │   ├── LiveHud.tsx           # Real-time speed, accuracy & combo HUD
+│   │   ├── SciFi3DScene.tsx      # 61-wafer holographic crystal matrix, stabilizer wings & starfield
 │   │   ├── SummaryModal.tsx      # Post-test 3D tilt summary card
-│   │   ├── TopNavBar.tsx         # Mode, language, sound profile & theme controls
+│   │   ├── TopNavBar.tsx         # Single-row mode, language & accent color controls
 │   │   └── TypingPrompt.tsx      # Monospace prompt, smooth caret & CJK IME positioning
 │   ├── constants/
+│   │   ├── holoMatrixLayout.ts   # 61-key staggered 3D wafer geometry & next-key code resolver
 │   │   ├── i18n.ts               # English & Chinese UI translations
-│   │   ├── keyboardLayout.ts     # Physical key matrix & label definitions
 │   │   ├── prompts.ts            # Word lists, code snippets & Chinese practice corpora
 │   │   └── themes.ts             # Accent color palettes & glow presets
 │   ├── hooks/
-│   │   ├── useKeyPressSync.ts    # Physical keyboard state & 3D animation sync
+│   │   ├── useTelemetryPulse.ts  # Pooled shockwaves, live key states & target-key ref bridge
 │   │   └── useTypingEngine.ts    # Core typing state machine, metrics & IME handling
 │   ├── types/
 │   │   └── typing.ts             # Shared TypeScript interfaces
 │   ├── App.tsx                   # Main layout & orchestrator
-│   ├── index.css                 # Tailwind v4 setup & glassmorphism / shake utilities
+│   ├── index.css                 # Tailwind v4 setup & EQ / caret / shake animations
 │   └── main.tsx                  # React entry point
 ├── LICENSE                       # MIT License
 ├── package.json
@@ -79,40 +73,10 @@ kinetic-type-3d/
 
 ## Local Development / 本地开发
 
-### Prerequisites
-- Node.js 20+ (Node.js 22 recommended)
-- npm
-
-### Setup & Run
-
 ```bash
-# Install dependencies
 npm install
-
-# Start Vite dev server
 npm run dev
-
-# Type-check with TypeScript
 npm run typecheck
-
-# Production build
-npm run build
-```
-
----
-
-## Deployment (GitHub Pages)
-
-This repository includes [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which automatically builds and deploys the app to **GitHub Pages** on every push to `main`:
-
-1. Configures GitHub Pages and builds `dist/` with `VITE_BASE_PATH=/<repo-name>/` so all static assets resolve properly under the repository subpath.
-2. Uploads the `dist/` folder as a Pages artifact.
-3. Deploys live via `actions/deploy-pages`.
-
-To preview a subpath production build locally:
-
-```powershell
-$env:VITE_BASE_PATH="/kinetic-type-3d/"
 npm run build
 ```
 

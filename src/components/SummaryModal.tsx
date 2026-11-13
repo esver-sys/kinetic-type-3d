@@ -143,6 +143,28 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
             {/* Top Specular Edge */}
             <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
+            {/* Subtle Sci-Fi Holographic HUD Corner Brackets */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3.5 top-3.5 h-3.5 w-3.5 rounded-tl-md border-l border-t opacity-60"
+              style={{ borderColor: accent.hex }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-3.5 top-3.5 h-3.5 w-3.5 rounded-tr-md border-r border-t opacity-60"
+              style={{ borderColor: accent.hex }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute bottom-3.5 left-3.5 h-3.5 w-3.5 rounded-bl-md border-b border-l opacity-50"
+              style={{ borderColor: accent.hex }}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute bottom-3.5 right-3.5 h-3.5 w-3.5 rounded-br-md border-b border-r opacity-50"
+              style={{ borderColor: accent.hex }}
+            />
+
             <div className="relative z-20" style={{ transform: 'translateZ(20px)' }}>
               {/* Header */}
               <div className="flex items-center justify-between">
@@ -270,7 +292,8 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.currentTarget.blur()
-                    soundEngine.unlock()
+                    soundEngine.unlockFromGesture()
+                    soundEngine.playHoloBurst()
                     onRestart()
                   }}
                   className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-950 transition-transform active:scale-95 cursor-pointer"
