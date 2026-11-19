@@ -2,6 +2,7 @@ import {
   AccentId,
   ChineseSubMode,
   MusicTrackId,
+  PassageSubMode,
   PracticeMode,
   SynthStemId,
   UiLanguage,
@@ -12,6 +13,7 @@ export interface UiStrings {
     subtitle: string
   }
   modes: Record<PracticeMode, string>
+  passageSubModes: Record<PassageSubMode, string>
   chineseSubModes: Record<ChineseSubMode, string>
   tracks: Record<MusicTrackId, { short: string; full: string }>
   stems: Record<SynthStemId, string>
@@ -44,6 +46,20 @@ export interface UiStrings {
     quickRestart: string
     restartTooltip: string
     nextSnippet: string
+    nextPassage: string
+    customBtnTooltip: string
+  }
+  customModal: {
+    title: string
+    subtitle: string
+    placeholder: string
+    detectedZh: string
+    detectedEn: string
+    charsUnit: string
+    fillSampleEn: string
+    fillSampleZh: string
+    cancel: string
+    apply: string
   }
   summary: {
     sessionComplete: string
@@ -69,14 +85,22 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       subtitle: 'HOLO // TYPE',
     },
     modes: {
+      passage: 'Prose',
       time: 'Time',
       words: 'Words',
       code: 'Code',
       chinese: '中文',
     },
-    chineseSubModes: {
-      phrases: 'Phrases',
+    passageSubModes: {
       prose: 'Prose',
+      poetry: 'Poetry',
+      classics: 'Classics',
+      en: 'EN',
+      custom: 'Custom',
+    },
+    chineseSubModes: {
+      prose: 'Prose',
+      phrases: 'Phrases',
       pinyin: 'Pinyin',
     },
     tracks: {
@@ -126,6 +150,20 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       quickRestart: 'quick restart',
       restartTooltip: 'Restart (Tab + Enter)',
       nextSnippet: 'Next snippet',
+      nextPassage: 'Next passage',
+      customBtnTooltip: 'Paste custom passage text',
+    },
+    customModal: {
+      title: 'Custom Plain Text',
+      subtitle: 'Paste any English or Chinese article, notes, or lyrics to practice immediately.',
+      placeholder: 'Paste or type your practice text here...',
+      detectedZh: 'Detected Chinese · IME + CPM',
+      detectedEn: 'Detected English · Direct WPM',
+      charsUnit: 'chars',
+      fillSampleEn: 'Sample EN',
+      fillSampleZh: 'Sample 中文',
+      cancel: 'Cancel',
+      apply: 'Start Practice',
     },
     summary: {
       sessionComplete: 'Telemetry Complete',
@@ -149,14 +187,22 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       subtitle: 'HOLO // TYPE',
     },
     modes: {
+      passage: '明文',
       time: '计时',
       words: '词数',
       code: '代码',
       chinese: '中文',
     },
+    passageSubModes: {
+      prose: '散文',
+      poetry: '古诗',
+      classics: '名篇',
+      en: '英文',
+      custom: '自定义',
+    },
     chineseSubModes: {
+      prose: '短文',
       phrases: '词组',
-      prose: '诗文',
       pinyin: '拼音',
     },
     tracks: {
@@ -205,7 +251,21 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       pressEnterRestart: '按 Enter 立即重新开始',
       quickRestart: '快速重开',
       restartTooltip: '重新开始 (Tab + Enter)',
-      nextSnippet: '换一段内容',
+      nextSnippet: '换一段代码',
+      nextPassage: '换一篇明文',
+      customBtnTooltip: '粘贴自定义明文练习',
+    },
+    customModal: {
+      title: '导入自定义明文',
+      subtitle: '粘贴任意中文或英文段落、随笔或歌词即可直接开始跟打，会自动识别输入法与计速模式。',
+      placeholder: '在这里粘贴或输入你想练习的文章段落...',
+      detectedZh: '识别为中文 · 自动启用汉字输入法 (字/分)',
+      detectedEn: '识别为英文/符号 · 直接键入 (WPM)',
+      charsUnit: '字',
+      fillSampleEn: '填入英文范例',
+      fillSampleZh: '填入中文范例',
+      cancel: '取消',
+      apply: '开始练习',
     },
     summary: {
       sessionComplete: '遥测同步完成',

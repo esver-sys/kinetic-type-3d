@@ -1,10 +1,12 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import {
+  BookOpen,
   Clock,
   Code2,
   Hash,
   Languages,
+  PenLine,
   RotateCcw,
   Shuffle,
 } from 'lucide-react'
@@ -17,6 +19,7 @@ import {
   AccentTheme,
   ChineseSubMode,
   CodeLanguage,
+  PassageSubMode,
   PracticeMode,
   TimeOption,
   UiLanguage,
@@ -26,6 +29,7 @@ import {
 interface TopNavBarProps {
   uiLang: UiLanguage
   mode: PracticeMode
+  passageSubMode: PassageSubMode
   timeOption: TimeOption
   wordsOption: WordsOption
   codeLanguage: CodeLanguage
@@ -33,6 +37,8 @@ interface TopNavBarProps {
   accent: AccentTheme
   onToggleUiLang: (lang: UiLanguage) => void
   onSelectMode: (mode: PracticeMode) => void
+  onSelectPassageSubMode: (sub: PassageSubMode) => void
+  onOpenCustomModal: () => void
   onSelectTime: (t: TimeOption) => void
   onSelectWords: (w: WordsOption) => void
   onSelectCodeLang: (lang: CodeLanguage) => void
@@ -49,13 +55,15 @@ const SPRING_TRANSITION = {
   mass: 0.8,
 }
 
+const PASSAGE_SUB_MODES: PassageSubMode[] = ['prose', 'poetry', 'classics', 'en', 'custom']
 const TIME_OPTIONS: TimeOption[] = [15, 30, 60]
 const WORDS_OPTIONS: WordsOption[] = [10, 25, 50]
-const CHINESE_SUB_MODES: ChineseSubMode[] = ['phrases', 'prose', 'pinyin']
+const CHINESE_SUB_MODES: ChineseSubMode[] = ['prose', 'phrases', 'pinyin']
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   uiLang,
   mode,
+  passageSubMode,
   timeOption,
   wordsOption,
   codeLanguage,
@@ -63,6 +71,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   accent,
   onToggleUiLang,
   onSelectMode,
+  onSelectPassageSubMode,
+  onOpenCustomModal,
   onSelectTime,
   onSelectWords,
   onSelectCodeLang,
@@ -143,6 +153,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <div className="flex items-center gap-0.5">
             {(
               [
+                { id: 'passage', label: t.modes.passage, Icon: BookOpen },
                 { id: 'time', label: t.modes.time, Icon: Clock },
                 { id: 'words', label: t.modes.words, Icon: Hash },
                 { id: 'code', label: t.modes.code, Icon: Code2 },
@@ -155,7 +166,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   key={id}
                   type="button"
                   onClick={blurAfterClick(() => onSelectMode(id))}
-                  className={`relative flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                  className={`relative flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                     active ? 'text-slate-100' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
@@ -184,6 +195,49 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
           {/* Contextual Sub-Options */}
           <div className="flex items-center gap-0.5">
+            {mode === 'passage' && (
+              <>
+                {PASSAGE_SUB_MODES.map((sub) => {
+                  const active = passageSubMode === sub
+                  return (
+                    <button
+                      key={sub}
+                      type="button"
+                      title={sub === 'custom' ? t.prompt.customBtnTooltip : undefined}
+                      onClick={blurAfterClick(() =>
+                        sub === 'custom'
+                          ? onOpenCustomModal()
+                          : onSelectPassageSubMode(sub),
+                      )}
+                      className={`relative flex items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                        active ? 'text-slate-100' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="active-sub-pill"
+                          transition={SPRING_TRANSITION}
+                          className="absolute inset-0 rounded-xl bg-white/[0.08] border border-white/10"
+                        />
+                      )}
+                      {sub === 'custom' && <PenLine className="relative z-10 h-3 w-3" />}
+                      <span className="relative z-10">{t.passageSubModes[sub]}</span>
+                    </button>
+                  )
+                })}
+                {passageSubMode !== 'custom' && (
+                  <button
+                    type="button"
+                    title={t.prompt.nextPassage}
+                    onClick={blurAfterClick(onShufflePrompt)}
+                    className="ml-0.5 rounded-xl p-1.5 text-slate-400 hover:bg-white/[0.06] hover:text-slate-100 transition-colors cursor-pointer"
+                  >
+                    <Shuffle className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </>
+            )}
+
             {mode === 'time' &&
               TIME_OPTIONS.map((sec) => {
                 const active = timeOption === sec

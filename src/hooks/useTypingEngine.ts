@@ -5,14 +5,19 @@ import {
   generateChinesePhraseText,
   generatePinyinPrompt,
   generateWordText,
+  pickChineseClassic,
+  pickChinesePoetry,
   pickChineseProse,
   pickCodeSnippet,
+  pickEnglishPassage,
 } from '../constants/prompts'
 import {
   ChineseProsePassage,
   ChineseSubMode,
   CodeLanguage,
   CodeSnippet,
+  EnglishPassage,
+  PassageSubMode,
   PinyinEntry,
   PracticeMode,
   PromptChar,
@@ -30,6 +35,7 @@ interface UseTypingEngineOptions {
   releaseAllKeys?: () => void
   setExpectedCodes?: (codes: string[]) => void
   streakIntensityRef: React.MutableRefObject<number>
+  isInputPaused?: boolean
 }
 
 function buildPromptChars(text: string): PromptChar[] {
@@ -38,6 +44,29 @@ function buildPromptChars(text: string): PromptChar[] {
     status: 'pending',
     errorPulse: 0,
   }))
+}
+
+function containsCjk(text: string): boolean {
+  return /[\u4e00-\u9fff]/.test(text)
+}
+
+function normalizeCustomPassageText(raw: string): string {
+  const lines = raw
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (lines.length === 0) return ''
+  let merged = lines[0]
+  for (let i = 1; i < lines.length; i++) {
+    const prevEnd = merged[merged.length - 1]
+    const nextStart = lines[i][0]
+    const cjkBoundary =
+      /[\u4e00-\u9fff，。？！；：、」』）】]/.test(prevEnd) &&
+      /[\u4e00-\u9fff「『（【]/.test(nextStart)
+    merged += (cjkBoundary ? '' : ' ') + lines[i]
+  }
+  return merged.replace(/[ \t]+/g, ' ').trim()
 }
 
 const HALF_TO_FULL_PUNCT: Record<string, string> = {
@@ -66,22 +95,28 @@ export function useTypingEngine({
   releaseAllKeys,
   setExpectedCodes,
   streakIntensityRef,
+  isInputPaused = false,
 }: UseTypingEngineOptions) {
-  const [mode, setMode] = useState<PracticeMode>('time')
+  const [mode, setMode] = useState<PracticeMode>('passage')
+  const [passageSubMode, setPassageSubMode] = useState<PassageSubMode>('prose')
   const [timeOption, setTimeOption] = useState<TimeOption>(30)
   const [wordsOption, setWordsOption] = useState<WordsOption>(25)
   const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>('typescript')
-  const [chineseSubMode, setChineseSubMode] = useState<ChineseSubMode>('phrases')
+  const [chineseSubMode, setChineseSubMode] = useState<ChineseSubMode>('prose')
+  const [activeEnglishPassage, setActiveEnglishPassage] = useState<EnglishPassage>(() =>
+    pickEnglishPassage(),
+  )
   const [activeSnippet, setActiveSnippet] = useState<CodeSnippet>(() =>
     pickCodeSnippet('typescript'),
   )
   const [activeProse, setActiveProse] = useState<ChineseProsePassage>(() =>
     pickChineseProse(),
   )
+  const [customPassageText, setCustomPassageText] = useState('')
   const [pinyinHanziMap, setPinyinHanziMap] = useState<Record<number, PinyinEntry>>({})
 
   const [chars, setChars] = useState<PromptChar[]>(() =>
-    buildPromptChars(generateWordText(95)),
+    buildPromptChars(activeProse.text),
   )
   const [cursor, setCursor] = useState(0)
   const [status, setStatus] = useState<TestStatus>('idle')
@@ -106,12 +141,24 @@ export function useTypingEngine({
   const charsRef = useRef<PromptChar[]>(chars)
   const cursorRef = useRef(0)
   const modeRef = useRef<PracticeMode>(mode)
+  const passageSubModeRef = useRef<PassageSubMode>(passageSubMode)
   const timeOptionRef = useRef<TimeOption>(timeOption)
   const wordsOptionRef = useRef<WordsOption>(wordsOption)
   const codeLanguageRef = useRef<CodeLanguage>(codeLanguage)
   const chineseSubModeRef = useRef<ChineseSubMode>(chineseSubMode)
+  const activeEnglishPassageRef = useRef<EnglishPassage>(activeEnglishPassage)
   const activeSnippetRef = useRef<CodeSnippet>(activeSnippet)
   const activeProseRef = useRef<ChineseProsePassage>(activeProse)
+  const customPassageTextRef = useRef<string>(customPassageText)
+  const customHasCjkRef = useRef<boolean>(false)
+  const modalOpenRef = useRef<boolean>(isInputPaused)
+
+  useEffect(() => {
+    modalOpenRef.current = isInputPaused
+    if (isInputPaused) {
+      releaseAllKeys?.()
+    }
+  }, [isInputPaused, releaseAllKeys])
 
   const startTimeRef = useRef<number>(0)
   const wpmRef = useRef(0)
@@ -130,7 +177,20 @@ export function useTypingEngine({
   const prevSampleTotalRef = useRef(0)
 
   const isHanziImeMode = useCallback(() => {
-    return modeRef.current === 'chinese' && chineseSubModeRef.current !== 'pinyin'
+    if (modeRef.current === 'chinese') {
+      return chineseSubModeRef.current !== 'pinyin'
+    }
+    if (modeRef.current === 'passage') {
+      if (
+        passageSubModeRef.current === 'prose' ||
+        passageSubModeRef.current === 'poetry' ||
+        passageSubModeRef.current === 'classics'
+      ) {
+        return true
+      }
+      if (passageSubModeRef.current === 'custom') return customHasCjkRef.current
+    }
+    return false
   }, [])
 
   const getSpeedUnit = useCallback((): 'WPM' | 'CPM' => {
@@ -148,12 +208,18 @@ export function useTypingEngine({
   )
 
   const focusImeIfNeeded = useCallback(() => {
+    if (modalOpenRef.current) return
     if (isHanziImeMode() && statusRef.current !== 'finished') {
       imeInputRef.current?.focus({ preventScroll: true })
     } else if (!isHanziImeMode() && document.activeElement === imeInputRef.current) {
       imeInputRef.current?.blur()
     }
   }, [isHanziImeMode])
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => focusImeIfNeeded())
+    return () => window.cancelAnimationFrame(id)
+  }, [focusImeIfNeeded])
 
   const disarmTab = useCallback(() => {
     tabArmedRef.current = false
@@ -199,6 +265,21 @@ export function useTypingEngine({
   )
 
   const buildModeLabel = useCallback(() => {
+    if (modeRef.current === 'passage') {
+      if (passageSubModeRef.current === 'en') {
+        return `Prose · ${activeEnglishPassageRef.current.title}`
+      }
+      if (passageSubModeRef.current === 'prose') {
+        return `散文 · ${activeProseRef.current.title}`
+      }
+      if (passageSubModeRef.current === 'poetry') {
+        return `古诗 · ${activeProseRef.current.title}`
+      }
+      if (passageSubModeRef.current === 'classics') {
+        return `名篇 · ${activeProseRef.current.title}`
+      }
+      return customHasCjkRef.current ? '明文 · 自定义中文' : 'Prose · Custom Text'
+    }
     if (modeRef.current === 'time') return `Time · ${timeOptionRef.current}s`
     if (modeRef.current === 'words') return `Words · ${wordsOptionRef.current}`
     if (modeRef.current === 'code') {
@@ -286,35 +367,92 @@ export function useTypingEngine({
   const resetTest = useCallback(
     (overrides?: {
       mode?: PracticeMode
+      passageSubMode?: PassageSubMode
       timeOption?: TimeOption
       wordsOption?: WordsOption
       codeLanguage?: CodeLanguage
       chineseSubMode?: ChineseSubMode
+      customText?: string
       cycleSnippet?: boolean
       cycleChinese?: boolean
+      cyclePassage?: boolean
     }) => {
       const nextMode = overrides?.mode ?? modeRef.current
+      const nextPassageSub = overrides?.passageSubMode ?? passageSubModeRef.current
       const nextTime = overrides?.timeOption ?? timeOptionRef.current
       const nextWords = overrides?.wordsOption ?? wordsOptionRef.current
       const nextLang = overrides?.codeLanguage ?? codeLanguageRef.current
       const nextChineseSub = overrides?.chineseSubMode ?? chineseSubModeRef.current
 
       modeRef.current = nextMode
+      passageSubModeRef.current = nextPassageSub
       timeOptionRef.current = nextTime
       wordsOptionRef.current = nextWords
       codeLanguageRef.current = nextLang
       chineseSubModeRef.current = nextChineseSub
 
       if (overrides?.mode !== undefined) setMode(nextMode)
+      if (overrides?.passageSubMode !== undefined) setPassageSubMode(nextPassageSub)
       if (overrides?.timeOption !== undefined) setTimeOption(nextTime)
       if (overrides?.wordsOption !== undefined) setWordsOption(nextWords)
       if (overrides?.codeLanguage !== undefined) setCodeLanguage(nextLang)
       if (overrides?.chineseSubMode !== undefined) setChineseSubMode(nextChineseSub)
 
+      if (overrides?.customText !== undefined) {
+        const cleaned = normalizeCustomPassageText(overrides.customText)
+        customPassageTextRef.current = cleaned
+        customHasCjkRef.current = containsCjk(cleaned)
+        setCustomPassageText(cleaned)
+      }
+
       let nextText = ''
       let nextPinyinMap: Record<number, PinyinEntry> = {}
 
-      if (nextMode === 'time') {
+      if (nextMode === 'passage') {
+        if (nextPassageSub === 'en') {
+          const passage = pickEnglishPassage(
+            overrides?.cyclePassage ? activeEnglishPassageRef.current.id : undefined,
+          )
+          activeEnglishPassageRef.current = passage
+          setActiveEnglishPassage(passage)
+          nextText = passage.text
+        } else if (nextPassageSub === 'poetry') {
+          const poem = pickChinesePoetry(
+            overrides?.cyclePassage || overrides?.cycleChinese
+              ? activeProseRef.current.id
+              : undefined,
+          )
+          activeProseRef.current = poem
+          setActiveProse(poem)
+          nextText = poem.text
+        } else if (nextPassageSub === 'classics') {
+          const classic = pickChineseClassic(
+            overrides?.cyclePassage || overrides?.cycleChinese
+              ? activeProseRef.current.id
+              : undefined,
+          )
+          activeProseRef.current = classic
+          setActiveProse(classic)
+          nextText = classic.text
+        } else if (nextPassageSub === 'prose') {
+          const prose = pickChineseProse(
+            overrides?.cyclePassage || overrides?.cycleChinese
+              ? activeProseRef.current.id
+              : undefined,
+          )
+          activeProseRef.current = prose
+          setActiveProse(prose)
+          nextText = prose.text
+        } else {
+          if (!customPassageTextRef.current) {
+            const fallback = activeProseRef.current.text
+            customPassageTextRef.current = fallback
+            customHasCjkRef.current = containsCjk(fallback)
+            setCustomPassageText(fallback)
+          }
+          nextText = customPassageTextRef.current
+        }
+      } else if (nextMode === 'time') {
         nextText = generateWordText(95)
       } else if (nextMode === 'words') {
         nextText = generateWordText(nextWords)
@@ -379,14 +517,23 @@ export function useTypingEngine({
       setSessionId((s) => s + 1)
 
       window.requestAnimationFrame(() => {
-        if (nextMode === 'chinese' && nextChineseSub !== 'pinyin') {
-          imeInputRef.current?.focus({ preventScroll: true })
-        } else if (document.activeElement === imeInputRef.current) {
-          imeInputRef.current?.blur()
-        }
+        focusImeIfNeeded()
       })
     },
-    [disarmTab, streakIntensityRef],
+    [disarmTab, focusImeIfNeeded, streakIntensityRef],
+  )
+
+  const applyCustomPassage = useCallback(
+    (rawText: string) => {
+      const cleaned = normalizeCustomPassageText(rawText)
+      if (!cleaned) return
+      resetTest({
+        mode: 'passage',
+        passageSubMode: 'custom',
+        customText: cleaned,
+      })
+    },
+    [resetTest],
   )
 
   const commitText = useCallback(
@@ -591,6 +738,14 @@ export function useTypingEngine({
   // Global low-latency telemetry capture & harmonic feedback
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (modalOpenRef.current) return
+      if (
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLInputElement && e.target !== imeInputRef.current)
+      ) {
+        return
+      }
+
       soundEngine.unlockFromGesture()
 
       if (!e.repeat) {
@@ -810,12 +965,17 @@ export function useTypingEngine({
 
   return {
     mode,
+    passageSubMode,
     timeOption,
     wordsOption,
     codeLanguage,
     chineseSubMode,
+    activeEnglishPassage,
     activeSnippet,
     activeProse,
+    customPassageText,
+    hasCustomCjk: customHasCjkRef.current,
+    isHanziIme: isHanziImeMode(),
     pinyinHanziMap,
     chars,
     cursor,
@@ -837,5 +997,6 @@ export function useTypingEngine({
     onImeCompositionEnd,
     onImeChange,
     resetTest,
+    applyCustomPassage,
   }
 }

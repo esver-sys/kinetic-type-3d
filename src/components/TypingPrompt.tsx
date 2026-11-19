@@ -16,6 +16,7 @@ interface TypingPromptProps {
   uiLang: UiLanguage
   mode: PracticeMode
   chineseSubMode: ChineseSubMode
+  isHanziIme: boolean
   status: TestStatus
   chars: PromptChar[]
   cursor: number
@@ -43,6 +44,7 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
   uiLang,
   mode,
   chineseSubMode,
+  isHanziIme,
   status,
   chars,
   cursor,
@@ -61,7 +63,7 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
   accent,
 }) => {
   const t = UI_STRINGS[uiLang]
-  const isHanziMode = mode === 'chinese' && chineseSubMode !== 'pinyin'
+  const isHanziMode = isHanziIme
   const isPinyinMode = mode === 'chinese' && chineseSubMode === 'pinyin'
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -75,7 +77,7 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
 
     if (isHanziMode) {
       const cjkPunct = new Set(['，', '。', '？', '！', '：', '；', '、', ',', '.', '?', '!'])
-      if (chineseSubMode === 'phrases') {
+      if (mode === 'chinese' && chineseSubMode === 'phrases') {
         // Keep each short phrase + its trailing punctuation intact on the same line
         let current: WordToken = { startIndex: 0, items: [] }
         for (let i = 0; i < chars.length; i++) {
@@ -161,7 +163,7 @@ export const TypingPrompt: React.FC<TypingPromptProps> = ({
 
   useLayoutEffect(() => {
     updateCaret.current()
-  }, [cursor, chars, mode, chineseSubMode, sessionId])
+  }, [cursor, chars, mode, chineseSubMode, isHanziMode, sessionId])
 
   useLayoutEffect(() => {
     const el = containerRef.current

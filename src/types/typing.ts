@@ -1,9 +1,10 @@
 export type UiLanguage = 'en' | 'zh'
 
-export type PracticeMode = 'time' | 'words' | 'code' | 'chinese'
+export type PracticeMode = 'passage' | 'time' | 'words' | 'code' | 'chinese'
 
 export type TimeOption = 15 | 30 | 60
 export type WordsOption = 10 | 25 | 50
+export type PassageSubMode = 'prose' | 'poetry' | 'classics' | 'en' | 'custom'
 export type ChineseSubMode = 'phrases' | 'prose' | 'pinyin'
 
 export type CodeLanguage = 'typescript' | 'rust' | 'python' | 'css'
@@ -69,6 +70,12 @@ export interface PinyinEntry {
 }
 
 export interface ChineseProsePassage {
+  id: string
+  title: string
+  text: string
+}
+
+export interface EnglishPassage {
   id: string
   title: string
   text: string

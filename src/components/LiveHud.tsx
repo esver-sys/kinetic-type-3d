@@ -7,6 +7,8 @@ import {
   ChineseProsePassage,
   ChineseSubMode,
   CodeSnippet,
+  EnglishPassage,
+  PassageSubMode,
   PracticeMode,
   UiLanguage,
 } from '../types/typing'
@@ -15,6 +17,7 @@ import { TestStatus } from '../hooks/useTypingEngine'
 interface LiveHudProps {
   uiLang: UiLanguage
   mode: PracticeMode
+  passageSubMode: PassageSubMode
   chineseSubMode: ChineseSubMode
   status: TestStatus
   wpm: number
@@ -26,6 +29,7 @@ interface LiveHudProps {
   wordsDone: number
   wordsTotal: number
   codeProgress: number
+  activeEnglishPassage: EnglishPassage
   activeSnippet: CodeSnippet
   activeProse: ChineseProsePassage
   accent: AccentTheme
@@ -34,6 +38,7 @@ interface LiveHudProps {
 export const LiveHud: React.FC<LiveHudProps> = ({
   uiLang,
   mode,
+  passageSubMode,
   chineseSubMode,
   status,
   wpm,
@@ -45,6 +50,7 @@ export const LiveHud: React.FC<LiveHudProps> = ({
   wordsDone,
   wordsTotal,
   codeProgress,
+  activeEnglishPassage,
   activeSnippet,
   activeProse,
   accent,
@@ -120,6 +126,16 @@ export const LiveHud: React.FC<LiveHudProps> = ({
         {/* Right Progress Indicator */}
         <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-slate-950/45 px-3 py-1 backdrop-blur-md">
           <Timer className="h-3.5 w-3.5" style={{ color: accent.hex }} />
+          {mode === 'passage' && (
+            <span className="font-mono text-xs font-medium text-slate-300">
+              {passageSubMode === 'en'
+                ? activeEnglishPassage.title
+                : passageSubMode === 'custom'
+                  ? t.passageSubModes.custom
+                  : activeProse.title}{' '}
+              <span className="text-slate-500 tabular-nums">· {codeProgress}%</span>
+            </span>
+          )}
           {mode === 'time' && (
             <span className="font-mono text-sm font-medium tabular-nums text-slate-200">
               {timeLeft}s

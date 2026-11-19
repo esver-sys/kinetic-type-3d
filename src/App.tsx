@@ -9,12 +9,14 @@ import { LiveHud } from './components/LiveHud'
 import { TypingPrompt } from './components/TypingPrompt'
 import { SciFi3DScene } from './components/SciFi3DScene'
 import { AudioConsoleDock } from './components/AudioConsoleDock'
+import { CustomPassageModal } from './components/CustomPassageModal'
 import { SummaryModal } from './components/SummaryModal'
 import { WebGLErrorBoundary } from './components/ErrorBoundary'
 
 export const App: React.FC = () => {
   const [uiLang, setUiLang] = useState<UiLanguage>('zh')
   const [accentId, setAccentId] = useState<AccentId>('cyan')
+  const [customModalOpen, setCustomModalOpen] = useState(false)
 
   const audioState = useSyncExternalStore(
     soundEngine.subscribe,
@@ -39,12 +41,16 @@ export const App: React.FC = () => {
 
   const {
     mode,
+    passageSubMode,
     timeOption,
     wordsOption,
     codeLanguage,
     chineseSubMode,
+    activeEnglishPassage,
     activeSnippet,
     activeProse,
+    customPassageText,
+    isHanziIme,
     pinyinHanziMap,
     chars,
     cursor,
@@ -65,12 +71,14 @@ export const App: React.FC = () => {
     onImeCompositionEnd,
     onImeChange,
     resetTest,
+    applyCustomPassage,
   } = useTypingEngine({
     triggerPulse,
     setKeyDown,
     releaseAllKeys,
     setExpectedCodes,
     streakIntensityRef,
+    isInputPaused: customModalOpen,
   })
 
   const handleCoreClick = useCallback(
@@ -96,7 +104,12 @@ export const App: React.FC = () => {
   }, [chars, cursor, mode, wordsOption])
 
   const codeProgress = useMemo(() => {
-    if ((mode !== 'code' && mode !== 'chinese') || chars.length === 0) return 0
+    if (
+      (mode !== 'passage' && mode !== 'code' && mode !== 'chinese') ||
+      chars.length === 0
+    ) {
+      return 0
+    }
     return Math.min(100, Math.round((cursor / chars.length) * 100))
   }, [chars.length, cursor, mode])
 
@@ -142,6 +155,7 @@ export const App: React.FC = () => {
       <TopNavBar
         uiLang={uiLang}
         mode={mode}
+        passageSubMode={passageSubMode}
         timeOption={timeOption}
         wordsOption={wordsOption}
         codeLanguage={codeLanguage}
@@ -149,6 +163,10 @@ export const App: React.FC = () => {
         accent={accent}
         onToggleUiLang={setUiLang}
         onSelectMode={(nextMode) => resetTest({ mode: nextMode })}
+        onSelectPassageSubMode={(sub) =>
+          resetTest({ mode: 'passage', passageSubMode: sub })
+        }
+        onOpenCustomModal={() => setCustomModalOpen(true)}
         onSelectTime={(t) => resetTest({ mode: 'time', timeOption: t })}
         onSelectWords={(w) => resetTest({ mode: 'words', wordsOption: w })}
         onSelectCodeLang={(lang) => resetTest({ mode: 'code', codeLanguage: lang })}
@@ -156,9 +174,11 @@ export const App: React.FC = () => {
           resetTest({ mode: 'chinese', chineseSubMode: sub })
         }
         onShufflePrompt={() =>
-          mode === 'code'
-            ? resetTest({ mode: 'code', cycleSnippet: true })
-            : resetTest({ mode: 'chinese', cycleChinese: true })
+          mode === 'passage'
+            ? resetTest({ mode: 'passage', cyclePassage: true })
+            : mode === 'code'
+              ? resetTest({ mode: 'code', cycleSnippet: true })
+              : resetTest({ mode: 'chinese', cycleChinese: true })
         }
         onSelectAccent={setAccentId}
         onRestart={() => resetTest()}
@@ -169,6 +189,7 @@ export const App: React.FC = () => {
         <LiveHud
           uiLang={uiLang}
           mode={mode}
+          passageSubMode={passageSubMode}
           chineseSubMode={chineseSubMode}
           status={status}
           wpm={wpm}
@@ -180,6 +201,7 @@ export const App: React.FC = () => {
           wordsDone={wordsDone}
           wordsTotal={wordsOption}
           codeProgress={codeProgress}
+          activeEnglishPassage={activeEnglishPassage}
           activeSnippet={activeSnippet}
           activeProse={activeProse}
           accent={accent}
@@ -189,6 +211,7 @@ export const App: React.FC = () => {
           uiLang={uiLang}
           mode={mode}
           chineseSubMode={chineseSubMode}
+          isHanziIme={isHanziIme}
           status={status}
           chars={chars}
           cursor={cursor}
@@ -219,6 +242,19 @@ export const App: React.FC = () => {
         onToggleStem={(stem) => soundEngine.toggleStem(stem)}
         onToggleChimes={() => soundEngine.toggleKeyChimes()}
         onToggleMute={() => soundEngine.toggleMute()}
+      />
+
+      {/* Custom Plain Text Paste / Import Modal */}
+      <CustomPassageModal
+        isOpen={customModalOpen}
+        uiLang={uiLang}
+        initialText={customPassageText || activeProse.text}
+        accent={accent}
+        onClose={() => setCustomModalOpen(false)}
+        onApply={(text) => {
+          setCustomModalOpen(false)
+          applyCustomPassage(text)
+        }}
       />
 
       {/* Post-Test 3D Tilt Summary Modal */}

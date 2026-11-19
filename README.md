@@ -14,7 +14,8 @@ An interactive sci-fi 3D typing practice studio built around tactile keystroke p
   - **Next-Key Holographic Guidance:** Gently highlights the upcoming expected character crystal (including `Shift` when required) in ASCII / Pinyin / Code modes.
   - **Error & Combo Telemetry:** Mistyped keys flash sharp crimson (`#ff2446`) with subtle glitch shake and reset combo; higher WPM & combo streaks ignite twin stabilizer wing bars and accelerate background star-warp speed.
 - **Typing-First Minimalist UI & Bilingual Modes (`EN` / `中文`)**
-  - **Modes:** `Time` (`15s` / `30s` / `60s`), `Words` (`10` / `25` / `50`), `Code` (`TypeScript` / `Rust` / `Python` / `CSS`), and `中文` (`词组` / `诗文` / `拼音`).
+  - **Modes:** `Prose / 明文` (`散文` · `古诗` · `名篇` · `英文` · `自定义导入`), `Time` (`15s` / `30s` / `60s`), `Words` (`10` / `25` / `50`), `Code` (`TypeScript` / `Rust` / `Python` / `CSS`), and `中文` (`短文` / `词组` / `拼音`).
+  - **Custom Plain Text Import:** Paste any Chinese or English article, notes, or lyrics; CJK presence is auto-detected to engage IME + CPM or direct WPM mode seamlessly.
   - **Chinese IME Support:** Clean bottom-anchored hidden composition input keeps OS candidate bars cleanly below the prompt box without obscuring target text.
   - **Live HUD & 3D Summary Card:** Real-time WPM/CPM, accuracy %, combo streak, 5 customizable accent themes, and post-test 3D tilt summary card (`Tab + Enter` quick restart).
 - **Pure-Code Web Audio Synth Companion (`Web Audio API`)**
@@ -44,6 +45,7 @@ kinetic-type-3d/
 │   │   └── soundEngine.ts        # Web Audio synthesizer, per-session FX buses, stems & analyser
 │   ├── components/
 │   │   ├── AudioConsoleDock.tsx  # Compact bottom-right synth pill & expandable track/stem drawer
+│   │   ├── CustomPassageModal.tsx # Custom plain-text paste & auto CJK/EN detection dialog
 │   │   ├── ErrorBoundary.tsx     # Graceful WebGL / runtime fallback boundary
 │   │   ├── LiveHud.tsx           # Real-time speed, accuracy & combo HUD
 │   │   ├── SciFi3DScene.tsx      # 61-wafer holographic crystal matrix, stabilizer wings & starfield
@@ -53,7 +55,7 @@ kinetic-type-3d/
 │   ├── constants/
 │   │   ├── holoMatrixLayout.ts   # 61-key staggered 3D wafer geometry & next-key code resolver
 │   │   ├── i18n.ts               # English & Chinese UI translations
-│   │   ├── prompts.ts            # Word lists, code snippets & Chinese practice corpora
+│   │   ├── prompts.ts            # Word lists, code snippets, prose, poetry & classic passages
 │   │   └── themes.ts             # Accent color palettes & glow presets
 │   ├── hooks/
 │   │   ├── useTelemetryPulse.ts  # Pooled shockwaves, live key states & target-key ref bridge
